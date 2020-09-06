@@ -6,7 +6,7 @@ import hashlib
 
 from ecdsa import NIST256p
 from ecdsa import SigningKey
-from ecdsa.ecdsa import Private_key
+from ecdsa.ecdsa import Private_key, Public_key
 
 import utils
 
@@ -69,7 +69,7 @@ class Transaction(object):
     self.recipient_blockchain_address = recipient_blockchain_address
     self.value = value
 
-  def generate_sugnature(self):
+  def generate_signature(self):
     sha256 = hashlib.sha256()
     transaction = utils.sorted_dict_by_key({
       'sender_blockchain_address': self.sender_blockchain_address,
@@ -85,14 +85,30 @@ class Transaction(object):
     return signature
 
 
-    
+
 if  __name__ == '__main__':
-  wallet = Wallet()
-  print(wallet.private_key)
-  print(wallet.public_key)
-  print(wallet.blockchain_address)
+  wallet_M = Wallet()
+  wallet_A = Wallet()
+  wallet_B = Wallet()
+
   t = Transaction(
-    wallet.private_key, wallet.public_key, wallet.blockchain_address, 
-    'B', 1.0)
-  print(t.generate_sugnature())
+    wallet_A.private_key, wallet_A.public_key, wallet_A.blockchain_address, 
+    wallet_B.blockchain_address, 1.0)
+  
+  ####### Blockchain Node
+  import blockchain
+  block_chain =blockchain.BlockChain(
+    blockchain_address=wallet_M.blockchain_address)
+  is_added = block_chain.add_transaction(
+    wallet_A.blockchain_address,
+    wallet_B.blockchain_address,
+    1.0,
+    wallet_A.public_key,
+    t.generate_signature())
+  print('Added?', is_added)
+  block_chain.mining()
+  utils.pprint(block_chain.chain)
+
+  print('A', block_chain.calculate_total_amount(wallet_A.blockchain_address))
+  print('B', block_chain.calculate_total_amount(wallet_B.blockchain_address))
 

@@ -8,6 +8,7 @@ import threading
 
 from ecdsa import NIST256p
 from ecdsa import VerifyingKey
+import requests
 
 import utils
 
@@ -29,11 +30,11 @@ class BlockChain(object):
   def __init__(self, blockchain_address=None, port=None):
     self.transaction_pool = []
     self.chain = []
+    self.neighbours = []
     self.create_block(0, self.hash({}))
     self.blockchain_address = blockchain_address
     self.port = port
     self.mining_semaphore = threading.Semaphore(1)
-    self.neighbours = []
     self.sync_neighbours_semaphore = threading.Semaphore(1)
 
   def set_neighbours(self):
@@ -62,6 +63,10 @@ class BlockChain(object):
     })
     self.chain.append(block)
     self.transaction_pool = []
+
+    for node in self.neighbours:
+      requests.delete(f'http://{node}/transactions')
+
     return block
     
   def hash(self, block):
@@ -99,9 +104,18 @@ class BlockChain(object):
        sender_blockchain_address, recipient_blockchain_address, 
        value, sender_public_key, signature)
 
-    # TODO
-    # Sync
-
+    if is_transacted:
+      for node in self.neighbours:
+        requests.put(
+          f'http://{node}/transactions',
+          json={
+            'sender_blockchain_address': sender_blockchain_address,
+            'recipient_blockchain_address': recipient_blockchain_address,
+            'value': value,
+            'sender_public_key': sender_public_key,
+            'signature': signature,
+          }
+        )
     return is_transacted
 
 

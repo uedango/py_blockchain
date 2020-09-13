@@ -37,6 +37,11 @@ class BlockChain(object):
     self.mining_semaphore = threading.Semaphore(1)
     self.sync_neighbours_semaphore = threading.Semaphore(1)
 
+  def run(self):
+    self.sync_neighbours()
+    self.resolve_conflicts()
+    # self.start_mining()
+
   def set_neighbours(self):
     self.neighbours = utils.find_neighbours(
       utils.get_host(), self.port,
@@ -153,14 +158,18 @@ class BlockChain(object):
     if not self.transaction_pool:
       return False
 
-    nonce = self.proof_of_work()
     self.add_transaction(
       sender_blockchain_address=MINING_SENDER,
       recipient_blockchain_address=self.blockchain_address,
       value=MINING_REWORD)
+    nonce = self.proof_of_work()
     previous_hash = self.hash(self.chain[-1])
     self.create_block(nonce, previous_hash)
     logger.info({'action': 'mining', 'status': 'success'})
+
+    for node in self.neighbours:
+      requests.put(f'http://{node}/consensus')
+
     return True
 
   def start_mining(self):
@@ -200,6 +209,27 @@ class BlockChain(object):
       pre_block = block
       current_index += 1
     return True
+
+  def resolve_conflicts(self):
+    longest_chain = None
+    max_length = len(self.chain)
+    for node in self.neighbours:
+      response = requests.get(f'http://{node}/chain')
+      if response.status_code == 200:
+        response_json = response.json()
+        chain = response_json['chain']
+        chain_length = len(chain)
+        if chain_length > max_length and self.valid_chain(chain):
+          max_length = chain_length
+          longest_chain = chain
+
+    if longest_chain:
+      self.chain = longest_chain
+      logger.info({'action': 'resolve_conflicts', 'status': 'replaced'})
+      return True
+
+    logger.info({'action': 'resolve_conflicts', 'status': 'not_replaced'})
+    return False
 
 
 

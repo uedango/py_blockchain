@@ -74,6 +74,12 @@ def mine():
   return jsonify({'message': 'fail'}), 400
 
 
+@app.route('/mine/start', methods=['GET'])
+def start_mine():
+  get_blockchain().start_mining()
+  return jsonify({'message': 'success'}), 200
+
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()

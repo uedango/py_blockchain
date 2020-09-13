@@ -59,6 +59,7 @@ def create_transaction():
     'value': value,
     'signature': transaction.generate_signature(),
   }
+  
   response = requests.post(
     urllib.parse.urljoin(app.config['gw'], 'transactions'),
     json=json_data, timeout=3)

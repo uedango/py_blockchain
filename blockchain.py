@@ -16,6 +16,10 @@ MINING_SENDER = 'THE BLOCKCHAIN'
 MINING_REWORD = 1.0
 MINING_TIMER_SEC = 20
 
+BLOCKCHAIN_PORT_RANGE = (5000, 5003)
+NEIGHBOURS_IP_RANGE_NUM = (0, 1)
+BLOCKCHAIN_NEIGHBORS_SYNC_TIME_SEC = 20
+
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
@@ -29,6 +33,25 @@ class BlockChain(object):
     self.blockchain_address = blockchain_address
     self.port = port
     self.mining_semaphore = threading.Semaphore(1)
+    self.neighbours = []
+    self.sync_neighbours_semaphore = threading.Semaphore(1)
+
+  def set_neighbours(self):
+    self.neighbours = utils.find_neighbours(
+      utils.get_host(), self.port,
+      NEIGHBOURS_IP_RANGE_NUM[0], NEIGHBOURS_IP_RANGE_NUM[1],
+      BLOCKCHAIN_PORT_RANGE[0], BLOCKCHAIN_PORT_RANGE[1])
+    logger.info({'action': 'set_neighbours', 'neighbours': self.neighbours})
+
+  def sync_neighbours(self):
+    is_acquire = self.sync_neighbours_semaphore.acquire(blocking=False)
+    if is_acquire:
+      with contextlib.ExitStack() as stack:
+        stack.callback(self.sync_neighbours_semaphore.release)
+        self.set_neighbours()
+        loop = threading.Timer(
+          BLOCKCHAIN_NEIGHBORS_SYNC_TIME_SEC, self.sync_neighbours)
+        loop.start()
 
   def create_block(self, nonce, previous_hash):
     block = utils.sorted_dict_by_key({

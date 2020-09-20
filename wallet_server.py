@@ -1,5 +1,3 @@
-from blockchain_server import get_total_amount
-from socket import timeout
 import urllib.parse
 
 from flask import Flask

@@ -5,10 +5,11 @@ from flask import request
 import blockchain
 import wallet
 
+
 app = Flask(__name__)
-
-
 cache = {}
+
+
 def get_blockchain():
     cached_blockchain = cache.get('blockchain')
     if not cached_blockchain:
@@ -91,6 +92,7 @@ def transaction():
       block_chain.transaction_pool = []
       return jsonify({'message': 'success'}), 200
 
+
 @app.route('/mine', methods=['GET'])
 def mine():
   block_chain = get_blockchain()
@@ -105,18 +107,21 @@ def start_mine():
   get_blockchain().start_mining()
   return jsonify({'message': 'success'}), 200
 
+
 @app.route('/consensus', methods=['PUT'])
 def consensus():
   block_chain = get_blockchain()
   replaced = block_chain.resolve_conflicts()
   return jsonify({'replaced': replaced}), 200
   
+
 @app.route('/amount', methods=['GET'])
 def get_total_amount():
     blockchain_address = request.args['blockchain_address']
     return jsonify({
         'amount': get_blockchain().calculate_total_amount(blockchain_address)
     }), 200
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
